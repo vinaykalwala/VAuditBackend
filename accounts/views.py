@@ -489,8 +489,7 @@ def process_payment(request):
 
             # Save payment details
             payment = Payment.objects.create(
-                user=user,          # ForeignKey relationship with the User instance
-                user_id=user.id,    # Explicitly storing the user ID
+                user=user,          # Store the user instance, which stores the ID by default in the DB
                 plan=plan,
                 price=price,
                 payment_id=payment_id
@@ -502,7 +501,7 @@ def process_payment(request):
                 {
                     'message': 'Payment details saved successfully!',
                     'payment': {
-                        'user_id': payment.user_id,   # Return the stored user ID
+                        'user_id': payment.user.id,  # Return the user's ID
                         'plan': payment.plan,
                         'price': payment.price,
                         'payment_id': payment.payment_id,
@@ -517,17 +516,21 @@ def process_payment(request):
 
     return JsonResponse({'error': 'Invalid request method. Only POST is allowed.'}, status=405)
 
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 
-@csrf_exempt
-@login_required(login_url='/login/')
-def check_user_subscription(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_subscription(request):
+    """
+    API endpoint to check if the user has an active subscription.
+    """
     user = request.user
-    has_subscription = Payment.objects.filter(user=user, plan__isnull=False).exclude(plan="").exists()
-    return JsonResponse({'has_subscription': has_subscription})
+    latest_plan = user.get_latest_plan()
+    return Response({
+        'has_active_plan': bool(latest_plan),  # True if a plan exists
+        'plan': latest_plan  # The name of the plan or None
+    })

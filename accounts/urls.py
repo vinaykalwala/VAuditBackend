@@ -3,6 +3,7 @@ from .views import KeywordDataView, SendOTPView, LoginView, VerifyOTPView, signu
 from accounts import views
 from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .views import *
 
 urlpatterns = [
     path('api/login/', LoginView.as_view(), name='login'),
@@ -17,7 +18,8 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     path('api/process-payment/', process_payment, name='process_payment'),
-     path('api/check-subscription/', views.check_user_subscription, name='check_subscription'),
+    path('api/check-subscription/', check_subscription, name='check-subscription'),
+    
 
 
 ]

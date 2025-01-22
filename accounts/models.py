@@ -46,7 +46,8 @@ class User(AbstractBaseUser):
     objects = UserManager()
 
     def __str__(self):
-        return self.email
+        return f"{self.id}"
+
 
     def has_perm(self, perm, obj=None):
         """Return True if the user has the specified permission."""
@@ -64,6 +65,13 @@ class User(AbstractBaseUser):
 
     def is_otp_valid(self, otp):
         return self.otp == otp and self.otp_expires_at > timezone.now()
+    
+    def get_latest_plan(self):
+        """Retrieve the user's latest subscription plan."""
+        latest_payment = Payment.objects.filter(user=self).order_by('-created_at').first()
+        if latest_payment:
+            return latest_payment.plan
+        return None  # Return None if no active plan exists
 
 class OTP(models.Model):
     email = models.EmailField()
