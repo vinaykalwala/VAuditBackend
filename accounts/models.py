@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
 import random
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -39,6 +41,7 @@ class User(AbstractBaseUser):
     
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_expires_at = models.DateTimeField(blank=True, null=True)
+    user_subscription = models.CharField(max_length=255, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -66,12 +69,7 @@ class User(AbstractBaseUser):
     def is_otp_valid(self, otp):
         return self.otp == otp and self.otp_expires_at > timezone.now()
     
-    def get_latest_plan(self):
-        """Retrieve the user's latest subscription plan."""
-        latest_payment = Payment.objects.filter(user=self).order_by('-created_at').first()
-        if latest_payment:
-            return latest_payment.plan
-        return None  # Return None if no active plan exists
+    
 
 class OTP(models.Model):
     email = models.EmailField()
@@ -98,3 +96,9 @@ class Payment(models.Model):
 
 
 
+@receiver(post_save, sender=Payment)
+def update_user_subscription(sender, instance, **kwargs):
+    latest_payment = Payment.objects.filter(user=instance.user).order_by("-created_at").first()
+    if latest_payment:
+        instance.user.user_subscription = latest_payment.plan
+        instance.user.save()
